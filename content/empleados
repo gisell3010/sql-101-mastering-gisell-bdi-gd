@@ -1,0 +1,37 @@
+-- EMPLEADOS
+
+CREATE TABLE empresas.empleados (
+    empleado_id SERIAL PRIMARY KEY,
+    nombre_completo VARCHAR(100) NOT NULL,
+    fecha_contratacion DATE NOT NULL,
+    salario NUMERIC(10, 2) NOT NULL,
+    titulo_pregrado VARCHAR(50) NOT NULL,
+    ciudad_origen VARCHAR(100)
+);
+
+CREATE TABLE empresas.departamentos (
+    depto_id SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    presupuesto NUMERIC(10, 2) CHECK (presupuesto > 0)
+);
+-- ADD FIELD
+ALTER TABLE empresas.empleados
+ADD COLUMN depto_id INT;
+
+ALTER TABLE empresas.empleados
+ADD CONSTRAINT fk_empleados_departamentos
+FOREIGN KEY (depto_id)
+REFERENCES empresas.departamentos(depto_id);
+
+
+-- check constraint
+INSERT INTO empresas.departamentos(nombre, presupuesto)
+VALUES ('test' , -50);
+
+-- add constraint
+ALTER TABLE empresas.empleados
+ADD CONSTRAINT fecha_contratacion_valida CHECK (fecha_contratacion > '2000-01-01');
+
+-- check constraint
+INSERT INTO empresas.empleados(nombre_completo, fecha_contratacion, salario, titulo_pregrado)
+VALUES ('a', '1980-01-01', 500.50, 'ing');

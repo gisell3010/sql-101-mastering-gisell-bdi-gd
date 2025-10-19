@@ -1,90 +1,269 @@
 erDiagram
 
-CLIENTS {
-  string client_id PK
-  string first_name
-  string middle_name
-  string last_name
-  string gender
-  date birth_date
-  string email
-  string phone
-  string address
-}
+  %% =========================
+  %% RELATIONAL MODEL (snake_case, tables plural, attributes singular, EN)
+  %% =========================
 
-CREDIT_CARDS {
-  string card_id PK
-  string client_id FK
-  date issue_date
-  date expiration_date
-  string status
-  string franchise_id FK
-}
+  patients {
+    string patient_id PK
+    string first_name
+    string middle_name
+    string first_surname
+    string second_surname
+    date   birth_date
+    string sex
+    string email
+    datetime registration_ts
+    boolean active
+  }
 
-FRANCHISES {
-  string franchise_id PK
-  string name
-  string issuer_id FK
-  string country_code FK
-}
+  document_types {
+    string document_type_id PK
+    string name
+    string description
+  }
 
-ISSUERS {
-  string issuer_id PK
-  string name
-  string bank_code
-  string contact_phone
-  boolean international
-  string country_code FK
-}
+  patient_documents {
+    string patient_id FK
+    string document_type_id FK
+    string document_number PK
+    string issuing_country PK
+    date   issue_date
+  }
 
-COUNTRIES {
-  string country_code PK
-  string name
-  string currency
-  string region_id FK
-}
+  patient_addresses {
+    string address_id PK
+    string patient_id FK
+    string address_type
+    string department
+    string municipality
+    string address_text
+    float  latitude
+    float  longitude
+    string postal_code
+  }
 
-REGIONS {
-  string region_id PK
-  string name  
-}
+  patient_phones {
+    string phone_id PK
+    string patient_id FK
+    string phone_type
+    string number
+    boolean is_primary
+  }
 
-TRANSACTIONS {
-  string transaction_id PK
-  string card_id FK
-  float amount
-  string currency
-  datetime transaction_date
-  string channel
-  string status
-  string device_type
-  string location_id FK
-  string method_id FK
-}
+  emergency_contacts {
+    string contact_id PK
+    string patient_id FK
+    string name
+    string relationship
+    string phone
+    string email
+    string instructions
+  }
 
-MERCHANT_LOCATIONS {
-  string location_id PK
-  string store_name
-  string category
-  string city
-  string country_code FK
-  float latitude
-  float longitude
-}
+  doctors {
+    string doctor_id PK
+    string internal_code
+    string license_number
+    string first_name
+    string middle_name
+    string first_surname
+    string second_surname
+    string work_email
+    date   join_date
+    boolean active
+  }
 
-PAYMENT_METHODS {
-  string method_id PK
-  string name
-}
+  specialties {
+    string specialty_id PK
+    string name
+  }
 
-%% Relaciones actualizadas
-CLIENTS ||--o{ CREDIT_CARDS : owns
-CREDIT_CARDS }o--|| FRANCHISES : belongs_to
-FRANCHISES }o--|| ISSUERS : issue_by
-FRANCHISES }o--|| COUNTRIES : origin
-ISSUERS }o--|| COUNTRIES : operates_in
-MERCHANT_LOCATIONS }o--|| COUNTRIES : located_ind
-CREDIT_CARDS ||--o{ TRANSACTIONS : initiates
-TRANSACTIONS }o--|| MERCHANT_LOCATIONS : occurs_at
-TRANSACTIONS }o--|| PAYMENT_METHODS : uses
-COUNTRIES |o--|| REGIONS : belongs_to
+  doctor_specialties {
+    string doctor_id PK
+    string specialty_id PK
+    datetime since_ts
+  }
+
+  doctor_addresses {
+    string doctor_address_id PK
+    string doctor_id FK
+    string address_type
+    string department
+    string municipality
+    string address_text
+    string country_code
+    string postal_code
+    string office_hours
+  }
+
+  doctor_phones {
+    string doctor_phone_id PK
+    string doctor_id FK
+    string phone_type
+    string number
+  }
+
+  doctor_schedules {
+    string schedule_id PK
+    string doctor_id FK
+    int    weekday
+    string start_time
+    string end_time
+    string modality
+  }
+
+  rooms {
+    string room_id PK
+    string name
+    string location
+  }
+
+  appointments {
+    string appointment_id PK
+    string patient_id FK
+    string doctor_id  FK
+    string room_id    FK
+    date   date
+    string start_time
+    string end_time
+    string type
+    string status
+    string reason
+    string created_by
+    datetime created_at
+  }
+
+  clinical_histories {
+    string history_id PK
+    string appointment_id FK
+    string patient_id FK
+    datetime recorded_at
+    string kind
+    string summary_text
+    string summary_json
+    string author_id FK
+    string main_diagnosis_id FK
+  }
+
+  diagnoses {
+    string diagnosis_id PK
+    string icd_code
+    string description
+  }
+
+  history_diagnoses {
+    string history_id   PK
+    string diagnosis_id PK
+    int    rank PK
+    string certainty
+  }
+
+  medications {
+    string medication_id PK
+    string atc_code
+    string brand_name
+    string active_ingredient
+    string presentation
+  }
+
+  prescriptions {
+    string prescription_id PK
+    string history_id   FK
+    string medication_id FK
+    string dosage
+    string frequency
+    string route
+    string duration
+    string notes
+  }
+
+  vital_signs {
+    string vital_id PK
+    string history_id FK
+    string kind
+    float  value
+    string unit
+    datetime measured_at
+  }
+
+  procedures {
+    string procedure_id PK
+    string code
+    string description
+    float  reference_price
+  }
+
+  history_procedures {
+    string history_id   PK
+    string procedure_id PK
+  }
+
+  insurers {
+    string insurer_id PK
+    string name
+    string contact
+  }
+
+  policies {
+    string policy_id PK
+    string patient_id FK
+    string insurer_id FK
+    string policy_number
+    string coverage_summary
+    date   start_date
+    date   end_date
+    string status
+  }
+
+  audit_logs {
+    string audit_id PK
+    string user_id
+    string role
+    string entity
+    string entity_id
+    string action
+    string detail_json
+    datetime ts
+    string ip
+    string app
+  }
+
+  %% =========================
+  %% RELATIONSHIPS (clear verbs, left->right semantics)
+  %% =========================
+  patients           ||--o{ patient_documents  : has_document
+  document_types     ||--o{ patient_documents  : classifies_document
+
+  patients           ||--o{ patient_addresses  : has_address
+  patients           ||--o{ patient_phones     : has_phone
+  patients           ||--o{ emergency_contacts : has_emergency_contact
+
+  doctors            ||--o{ doctor_addresses   : has_address
+  doctors            ||--o{ doctor_phones      : has_phone
+  doctors            ||--o{ doctor_schedules   : has_schedule
+
+  doctors            ||--o{ doctor_specialties : has_specialty
+  specialties        ||--o{ doctor_specialties : is_specialty_for
+
+  rooms              ||--o{ appointments       : hosts_appointment
+  patients           ||--o{ appointments       : books_appointment
+  doctors            ||--o{ appointments       : attends_appointment
+
+  appointments       ||--o{ clinical_histories : generates_history
+  patients           ||--o{ clinical_histories : has_history
+  doctors            ||--o{ clinical_histories : authors_history
+
+  clinical_histories ||--o{ history_diagnoses  : has_diagnosis
+  diagnoses          ||--o{ history_diagnoses  : appears_in_history
+
+  clinical_histories ||--o{ prescriptions      : has_prescription
+  medications        ||--o{ prescriptions      : used_in_prescription
+
+  clinical_histories ||--o{ vital_signs        : records_vital_sign
+
+  clinical_histories ||--o{ history_procedures : includes_procedure
+  procedures         ||--o{ history_procedures : used_in_history
+
+  insurers           ||--o{ policies           : offers_policy
+  patients           ||--o{ policies           : holds_policy

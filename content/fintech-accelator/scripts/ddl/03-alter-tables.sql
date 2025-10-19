@@ -1,49 +1,75 @@
 -- ##################################################
--- #         MUSICDB ALTER TABLE SCRIPT             #
+-- #          SMART HEALTH ALTER TABLE SCRIPT        #
 -- ##################################################
--- This script contains 5 alterations to enhance the MusicDB database structure,
--- including adding new columns, modifying constraints, and implementing additional
--- validation rules to better support the system requirements.
-
--- ##################################################
--- #                ALTERATIONS                     #
--- ##################################################
-
--- STEP 1: Add a 'popularidad' column to the ARTISTAS table to track artist popularity rating
--- This helps with recommendations and popular artist listings
-ALTER TABLE vibesia.ARTISTAS 
-ADD COLUMN popularidad INTEGER DEFAULT 0 CHECK (popularidad BETWEEN 0 AND 100);
-
-COMMENT ON COLUMN vibesia.ARTISTAS.popularidad IS 'Índice de popularidad del artista (0-100)';
-
--- STEP 2: Add a 'explicit' flag to CANCIONES table to mark songs with explicit content
--- This allows for content filtering, especially for younger users
-ALTER TABLE vibesia.CANCIONES 
-ADD COLUMN contenido_explicito BOOLEAN DEFAULT FALSE;
-
-COMMENT ON COLUMN vibesia.CANCIONES.contenido_explicito IS 'Indica si la canción contiene lenguaje o temática para adultos';
-
--- STEP 3: Create a unique constraint on PLAYLISTS to ensure no duplicate playlist names per user
--- This prevents confusion with identical playlist names for the same user
-ALTER TABLE vibesia.PLAYLISTS 
-ADD CONSTRAINT uq_playlist_nombre_por_usuario UNIQUE (usuario_id, nombre);
-
-COMMENT ON CONSTRAINT uq_playlist_nombre_por_usuario ON vibesia.PLAYLISTS IS 'Garantiza que un usuario no pueda tener dos playlists con el mismo nombre';
-
--- STEP 4: Add fecha_ultima_reproduccion to USUARIO_DISPOSITIVO to track when a user last played music on each device
--- This allows tracking of recently used devices and inactive device cleanup
-ALTER TABLE vibesia.USUARIO_DISPOSITIVO 
-ADD COLUMN fecha_ultima_reproduccion TIMESTAMP;
-
-COMMENT ON COLUMN vibesia.USUARIO_DISPOSITIVO.fecha_ultima_reproduccion IS 'Fecha y hora en que el usuario reprodujo música por última vez en este dispositivo';
-
--- STEP 5: Add a CHECK constraint to ALBUMES to ensure release year is valid
--- This ensures data integrity by preventing future release dates and very old dates
-ALTER TABLE vibesia.ALBUMES 
-ADD CONSTRAINT chk_anio_lanzamiento_valido CHECK (anio_lanzamiento BETWEEN 1900 AND EXTRACT(YEAR FROM CURRENT_DATE));
-
-COMMENT ON CONSTRAINT chk_anio_lanzamiento_valido ON vibesia.ALBUMES IS 'Verifica que el año de lanzamiento sea válido (entre 1900 y el año actual)';
+-- This script applies structural improvements and additional
+-- constraints to the Smart Health database, enhancing data
+-- integrity, validation, and performance through indexes and
+-- constraints on key entities.
 
 -- ##################################################
--- #               END ALTERATIONS                  #
+-- #                   ALTERATIONS                  #
+-- ##################################################
+
+-- STEP 1: Add a UNIQUE constraint to ensure no duplicate email addresses for doctors
+ALTER TABLE smart_health.DOCTORS
+ADD CONSTRAINT uq_doctors_work_email UNIQUE (work_email);
+
+COMMENT ON CONSTRAINT uq_doctors_work_email ON smart_health.DOCTORS IS 'Garantiza que no existan correos electrónicos repetidos entre los médicos.';
+
+-- STEP 2: Add CHECK constraint for appointment status
+ALTER TABLE smart_health.APPOINTMENTS
+ADD CONSTRAINT chk_appointment_status CHECK (status IN ('Scheduled', 'Completed', 'Cancelled', 'No-show'));
+
+COMMENT ON CONSTRAINT chk_appointment_status ON smart_health.APPOINTMENTS IS 'Restringe el estado de la cita médica a valores válidos predefinidos.';
+
+-- STEP 3: Add CHECK constraint for patient gender
+ALTER TABLE smart_health.PATIENTS
+ADD CONSTRAINT chk_patient_sex CHECK (sex IN ('Male', 'Female', 'Other'));
+
+COMMENT ON CONSTRAINT chk_patient_sex ON smart_health.PATIENTS IS 'Define los valores permitidos para el campo sexo del paciente.';
+
+-- STEP 4: Add CHECK constraint for clinical history kind
+ALTER TABLE smart_health.CLINICAL_HISTORIES
+ADD CONSTRAINT chk_history_kind CHECK (kind IN ('Consultation', 'Emergency', 'Follow-up', 'Surgery'));
+
+COMMENT ON CONSTRAINT chk_history_kind ON smart_health.CLINICAL_HISTORIES IS 'Define los tipos válidos de historia clínica registrados en el sistema.';
+
+-- STEP 5: Add a column to track the last update timestamp for clinical histories
+ALTER TABLE smart_health.CLINICAL_HISTORIES
+ADD COLUMN last_update_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+COMMENT ON COLUMN smart_health.CLINICAL_HISTORIES.last_update_ts IS 'Marca la fecha y hora de la última actualización en la historia clínica.';
+
+-- STEP 6: Add CHECK constraint to ensure policy validity dates
+ALTER TABLE smart_health.POLICIES
+ADD CONSTRAINT chk_policy_dates CHECK (start_date <= end_date);
+
+COMMENT ON CONSTRAINT chk_policy_dates ON smart_health.POLICIES IS 'Asegura que la fecha de inicio de la póliza sea anterior o igual a la fecha de finalización.';
+
+-- STEP 7: Create an index for faster appointment lookups by doctor and date
+CREATE INDEX idx_appointments_doctor_date 
+ON smart_health.APPOINTMENTS (doctor_id, date);
+
+COMMENT ON INDEX idx_appointments_doctor_date IS 'Optimiza las consultas de citas por médico y fecha.';
+
+-- STEP 8: Create an index for patient last names
+CREATE INDEX idx_patients_last_name 
+ON smart_health.PATIENTS (first_surname, second_surname);
+
+COMMENT ON INDEX idx_patients_last_name IS 'Mejora la búsqueda de pacientes por apellidos.';
+
+-- STEP 9: Add CHECK constraint for positive reference price in procedures
+ALTER TABLE smart_health.PROCEDURES
+ADD CONSTRAINT chk_procedure_price CHECK (reference_price >= 0);
+
+COMMENT ON CONSTRAINT chk_procedure_price ON smart_health.PROCEDURES IS 'Verifica que el precio de referencia del procedimiento no sea negativo.';
+
+-- STEP 10: Add a column to track appointment confirmation timestamp
+ALTER TABLE smart_health.APPOINTMENTS
+ADD COLUMN confirmed_at TIMESTAMP;
+
+COMMENT ON COLUMN smart_health.APPOINTMENTS.confirmed_at IS 'Fecha y hora en que la cita fue confirmada.';
+
+-- ##################################################
+-- #                 END OF SCRIPT                  #
 -- ##################################################
