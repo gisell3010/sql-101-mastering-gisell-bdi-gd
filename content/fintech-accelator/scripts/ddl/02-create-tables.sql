@@ -1,363 +1,199 @@
 -- ##################################################
 -- #            DDL SCRIPT DOCUMENTATION            #
 -- ##################################################
--- This script defines the database structure for the Smart Health hospital management system.
--- Includes tables for PATIENTS, DOCTORS, APPOINTMENTS, CLINICAL_HISTORIES, MEDICATIONS,
--- DIAGNOSES, PROCEDURES, INSURERS, POLICIES, and auxiliary entities such as ADDRESSES,
--- PHONES, EMERGENCY_CONTACTS, and DOCUMENTS.
--- The system is designed to manage patient information, medical records, appointments,
--- and healthcare services with full referential integrity, normalization, and scalability.
+-- This script defines the database structure for a music management system
+-- Includes tables for ARTISTAS, ALBUMES, CANCIONES, GENEROS, USUARIOS, PLAYLISTS,
+-- DISPOSITIVOS, and tracking tables for relationships and usage data.
+-- The system is designed to manage music libraries, playlists, and user listening patterns,
+-- supporting comprehensive music organization, playlist management, and listening analytics.
+-- All tables include appropriate constraints, relationships, and data types to ensure 
+-- data integrity and optimal performance.
 
 -- ##################################################
 -- #              TABLE DEFINITIONS                 #
 -- ##################################################
 
 -- Independent tables first
--- Table: smart_health.PATIENTS
--- Brief: Stores basic information about patients
-CREATE TABLE IF NOT EXISTS smart_health.PATIENTS (
-    patient_id VARCHAR(50) PRIMARY KEY,
-    first_name VARCHAR(100) NOT NULL,
-    middle_name VARCHAR(100),
-    first_surname VARCHAR(100) NOT NULL,
-    second_surname VARCHAR(100),
-    birth_date DATE NOT NULL,
-    sex VARCHAR(10),
-    email VARCHAR(150) UNIQUE,
-    registration_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    active BOOLEAN DEFAULT TRUE
+-- Table: vibesia.ARTISTAS
+-- Brief: Stores information about music artists (soloists, bands, etc.)
+CREATE TABLE IF NOT EXISTS vibesia.ARTISTAS (
+    artista_id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    pais_origen VARCHAR(50) NOT NULL,
+    anio_formacion INTEGER,
+    biografia TEXT,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('solista', 'banda', 'colectivo', 'dúo', 'otro'))
 );
 
--- Table: smart_health.DOCUMENT_TYPES
--- Brief: Catalog of patient document types
-CREATE TABLE IF NOT EXISTS smart_health.DOCUMENT_TYPES (
-    document_type_id VARCHAR(20) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT
+-- Table: vibesia.GENEROS
+-- Brief: Catalog of music genres for categorization
+CREATE TABLE IF NOT EXISTS vibesia.GENEROS (
+    genero_id SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion TEXT
 );
 
--- Table: smart_health.PATIENT_DOCUMENTS
--- Brief: Links patients to their identification documents
-CREATE TABLE IF NOT EXISTS smart_health.PATIENT_DOCUMENTS (
-    patient_id VARCHAR(50) NOT NULL,
-    document_type_id VARCHAR(20) NOT NULL,
-    document_number VARCHAR(50) PRIMARY KEY,
-    issuing_country VARCHAR(50) NOT NULL,
-    issue_date DATE
+-- Table: vibesia.USUARIOS
+-- Brief: System users who manage music libraries and playlists
+CREATE TABLE IF NOT EXISTS vibesia.USUARIOS (
+    usuario_id SERIAL PRIMARY KEY,
+    nombre_usuario VARCHAR(50) NOT NULL UNIQUE,
+    correo_electronico VARCHAR(100) NOT NULL UNIQUE,
+    fecha_registro DATE NOT NULL DEFAULT CURRENT_DATE,
+    preferencias TEXT
 );
 
--- Table: smart_health.PATIENT_ADDRESSES
--- Brief: Stores addresses associated with patients
-CREATE TABLE IF NOT EXISTS smart_health.PATIENT_ADDRESSES (
-    address_id VARCHAR(50) PRIMARY KEY,
-    patient_id VARCHAR(50) NOT NULL,
-    address_type VARCHAR(50),
-    department VARCHAR(100),
-    municipality VARCHAR(100),
-    address_text VARCHAR(255),
-    latitude DECIMAL(9,6),
-    longitude DECIMAL(9,6),
-    postal_code VARCHAR(20)
+-- Table: vibesia.DISPOSITIVOS
+-- Brief: Devices used to play music through the system
+CREATE TABLE IF NOT EXISTS vibesia.DISPOSITIVOS (
+    dispositivo_id SERIAL PRIMARY KEY,
+    tipo VARCHAR(50) NOT NULL,
+    sistema_operativo VARCHAR(50) NOT NULL
 );
 
--- Table: smart_health.PATIENT_PHONES
--- Brief: Contact phone numbers for patients
-CREATE TABLE IF NOT EXISTS smart_health.PATIENT_PHONES (
-    phone_id VARCHAR(50) PRIMARY KEY,
-    patient_id VARCHAR(50) NOT NULL,
-    phone_type VARCHAR(50),
-    number VARCHAR(50) NOT NULL,
-    is_primary BOOLEAN DEFAULT FALSE
+-- Dependent tables
+-- Table: vibesia.ALBUMES
+-- Brief: Music albums associated with artists
+CREATE TABLE IF NOT EXISTS vibesia.ALBUMES (
+    album_id SERIAL PRIMARY KEY,
+    artista_id INTEGER NOT NULL,
+    titulo VARCHAR(150) NOT NULL,
+    anio_lanzamiento INTEGER NOT NULL,
+    discografica VARCHAR(100),
+    tipo_album VARCHAR(20) NOT NULL CHECK (tipo_album IN ('estudio', 'directo', 'recopilatorio', 'remix', 'otro')),
+    portada VARCHAR(255)
 );
 
--- Table: smart_health.EMERGENCY_CONTACTS
--- Brief: Emergency contacts related to patients
-CREATE TABLE IF NOT EXISTS smart_health.EMERGENCY_CONTACTS (
-    contact_id VARCHAR(50) PRIMARY KEY,
-    patient_id VARCHAR(50) NOT NULL,
-    name VARCHAR(150) NOT NULL,
-    relationship VARCHAR(50),
-    phone VARCHAR(50),
-    email VARCHAR(150),
-    instructions TEXT
+-- Table: vibesia.CANCIONES
+-- Brief: Individual songs from albums
+CREATE TABLE IF NOT EXISTS vibesia.CANCIONES (
+    cancion_id SERIAL PRIMARY KEY,
+    album_id INTEGER NOT NULL,
+    titulo VARCHAR(150) NOT NULL,
+    duracion_segundos INTEGER NOT NULL CHECK (duracion_segundos > 0),
+    numero_pista INTEGER NOT NULL,
+    compositor VARCHAR(100),
+    letra TEXT,
+    ruta_archivo VARCHAR(255) NOT NULL
 );
 
--- Table: smart_health.DOCTORS
--- Brief: Stores doctor information
-CREATE TABLE IF NOT EXISTS smart_health.DOCTORS (
-    doctor_id VARCHAR(50) PRIMARY KEY,
-    internal_code VARCHAR(50),
-    license_number VARCHAR(50),
-    first_name VARCHAR(100) NOT NULL,
-    middle_name VARCHAR(100),
-    first_surname VARCHAR(100) NOT NULL,
-    second_surname VARCHAR(100),
-    work_email VARCHAR(150),
-    join_date DATE,
-    active BOOLEAN DEFAULT TRUE
+-- Table: vibesia.PLAYLISTS
+-- Brief: User-created collections of songs
+CREATE TABLE IF NOT EXISTS vibesia.PLAYLISTS (
+    playlist_id SERIAL PRIMARY KEY,
+    usuario_id INTEGER NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    fecha_creacion DATE NOT NULL DEFAULT CURRENT_DATE,
+    descripcion TEXT,
+    es_publica BOOLEAN NOT NULL DEFAULT FALSE
 );
 
--- Table: smart_health.SPECIALTIES
--- Brief: Medical specialties catalog
-CREATE TABLE IF NOT EXISTS smart_health.SPECIALTIES (
-    specialty_id VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL
+-- Relationship tables
+-- Table: vibesia.CANCION_GENERO
+-- Brief: Many-to-many relationship between songs and genres
+CREATE TABLE IF NOT EXISTS vibesia.CANCION_GENERO (
+    cancion_id INTEGER NOT NULL,
+    genero_id INTEGER NOT NULL,
+    PRIMARY KEY (cancion_id, genero_id)
 );
 
--- Table: smart_health.DOCTOR_SPECIALTIES
--- Brief: Relationship between doctors and specialties
-CREATE TABLE IF NOT EXISTS smart_health.DOCTOR_SPECIALTIES (
-    doctor_id VARCHAR(50) NOT NULL,
-    specialty_id VARCHAR(50) NOT NULL,
-    since_ts TIMESTAMP,
-    PRIMARY KEY (doctor_id, specialty_id)
+-- Table: vibesia.PLAYLIST_CANCION
+-- Brief: Songs included in playlists with ordering information
+CREATE TABLE IF NOT EXISTS vibesia.PLAYLIST_CANCION (
+    playlist_id INTEGER NOT NULL,
+    cancion_id INTEGER NOT NULL,
+    orden INTEGER NOT NULL,
+    PRIMARY KEY (playlist_id, cancion_id)
 );
 
--- Table: smart_health.DOCTOR_ADDRESSES
--- Brief: Doctor office or work addresses
-CREATE TABLE IF NOT EXISTS smart_health.DOCTOR_ADDRESSES (
-    doctor_address_id VARCHAR(50) PRIMARY KEY,
-    doctor_id VARCHAR(50) NOT NULL,
-    address_type VARCHAR(50),
-    department VARCHAR(100),
-    municipality VARCHAR(100),
-    address_text VARCHAR(255),
-    country_code VARCHAR(10),
-    postal_code VARCHAR(20),
-    office_hours VARCHAR(255)
+-- Table: vibesia.USUARIO_DISPOSITIVO
+-- Brief: Devices associated with users and their usage history
+CREATE TABLE IF NOT EXISTS vibesia.USUARIO_DISPOSITIVO (
+    usuario_id INTEGER NOT NULL,
+    dispositivo_id INTEGER NOT NULL,
+    fecha_registro DATE NOT NULL DEFAULT CURRENT_DATE,
+    ultimo_acceso TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (usuario_id, dispositivo_id)
 );
 
--- Table: smart_health.DOCTOR_PHONES
--- Brief: Contact numbers for doctors
-CREATE TABLE IF NOT EXISTS smart_health.DOCTOR_PHONES (
-    doctor_phone_id VARCHAR(50) PRIMARY KEY,
-    doctor_id VARCHAR(50) NOT NULL,
-    phone_type VARCHAR(50),
-    number VARCHAR(50) NOT NULL
-);
-
--- Table: smart_health.DOCTOR_SCHEDULES
--- Brief: Weekly schedules for doctors
-CREATE TABLE IF NOT EXISTS smart_health.DOCTOR_SCHEDULES (
-    schedule_id VARCHAR(50) PRIMARY KEY,
-    doctor_id VARCHAR(50) NOT NULL,
-    weekday INT NOT NULL CHECK (weekday BETWEEN 1 AND 7),
-    start_time TIME,
-    end_time TIME,
-    modality VARCHAR(50)
-);
-
--- Table: smart_health.ROOMS
--- Brief: Rooms or consulting spaces
-CREATE TABLE IF NOT EXISTS smart_health.ROOMS (
-    room_id VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    location VARCHAR(255)
-);
-
--- Table: smart_health.APPOINTMENTS
--- Brief: Medical appointments registry
-CREATE TABLE IF NOT EXISTS smart_health.APPOINTMENTS (
-    appointment_id VARCHAR(50) PRIMARY KEY,
-    patient_id VARCHAR(50) NOT NULL,
-    doctor_id VARCHAR(50) NOT NULL,
-    room_id VARCHAR(50),
-    date DATE NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME,
-    type VARCHAR(50),
-    status VARCHAR(50),
-    reason TEXT,
-    created_by VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Table: smart_health.DIAGNOSES
--- Brief: Catalog of diagnoses
-CREATE TABLE IF NOT EXISTS smart_health.DIAGNOSES (
-    diagnosis_id VARCHAR(50) PRIMARY KEY,
-    icd_code VARCHAR(20),
-    description TEXT
-);
-
--- Table: smart_health.MEDICATIONS
--- Brief: Drug catalog
-CREATE TABLE IF NOT EXISTS smart_health.MEDICATIONS (
-    medication_id VARCHAR(50) PRIMARY KEY,
-    atc_code VARCHAR(20),
-    brand_name VARCHAR(100),
-    active_ingredient VARCHAR(100),
-    presentation VARCHAR(100)
-);
-
--- Table: smart_health.PROCEDURES
--- Brief: Clinical procedure catalog
-CREATE TABLE IF NOT EXISTS smart_health.PROCEDURES (
-    procedure_id VARCHAR(50) PRIMARY KEY,
-    code VARCHAR(20),
-    description TEXT,
-    reference_price DECIMAL(10,2)
-);
-
--- Table: smart_health.CLINICAL_HISTORIES
--- Brief: Patient medical histories
-CREATE TABLE IF NOT EXISTS smart_health.CLINICAL_HISTORIES (
-    history_id VARCHAR(50) PRIMARY KEY,
-    appointment_id VARCHAR(50) NOT NULL,
-    patient_id VARCHAR(50) NOT NULL,
-    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    kind VARCHAR(50),
-    summary_text TEXT,
-    summary_json TEXT,
-    author_id VARCHAR(50),
-    main_diagnosis_id VARCHAR(50)
-);
-
--- Table: smart_health.HISTORY_DIAGNOSES
--- Brief: Diagnoses linked to each clinical history
-CREATE TABLE IF NOT EXISTS smart_health.HISTORY_DIAGNOSES (
-    history_id VARCHAR(50) NOT NULL,
-    diagnosis_id VARCHAR(50) NOT NULL,
-    rank INT,
-    certainty VARCHAR(50),
-    PRIMARY KEY (history_id, diagnosis_id)
-);
-
--- Table: smart_health.PRESCRIPTIONS
--- Brief: Prescriptions generated in medical care
-CREATE TABLE IF NOT EXISTS smart_health.PRESCRIPTIONS (
-    prescription_id VARCHAR(50) PRIMARY KEY,
-    history_id VARCHAR(50) NOT NULL,
-    medication_id VARCHAR(50) NOT NULL,
-    dosage VARCHAR(50),
-    frequency VARCHAR(50),
-    route VARCHAR(50),
-    duration VARCHAR(50),
-    notes TEXT
-);
-
--- Table: smart_health.VITAL_SIGNS
--- Brief: Vital signs recorded during patient care
-CREATE TABLE IF NOT EXISTS smart_health.VITAL_SIGNS (
-    vital_id VARCHAR(50) PRIMARY KEY,
-    history_id VARCHAR(50) NOT NULL,
-    kind VARCHAR(50),
-    value DECIMAL(6,2),
-    unit VARCHAR(20),
-    measured_at TIMESTAMP
-);
-
--- Table: smart_health.HISTORY_PROCEDURES
--- Brief: Procedures performed in clinical histories
-CREATE TABLE IF NOT EXISTS smart_health.HISTORY_PROCEDURES (
-    history_id VARCHAR(50) NOT NULL,
-    procedure_id VARCHAR(50) NOT NULL,
-    PRIMARY KEY (history_id, procedure_id)
-);
-
--- Table: smart_health.INSURERS
--- Brief: Insurance companies
-CREATE TABLE IF NOT EXISTS smart_health.INSURERS (
-    insurer_id VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(150) NOT NULL,
-    contact VARCHAR(150)
-);
-
--- Table: smart_health.POLICIES
--- Brief: Medical insurance policies
-CREATE TABLE IF NOT EXISTS smart_health.POLICIES (
-    policy_id VARCHAR(50) PRIMARY KEY,
-    patient_id VARCHAR(50) NOT NULL,
-    insurer_id VARCHAR(50) NOT NULL,
-    policy_number VARCHAR(100),
-    coverage_summary TEXT,
-    start_date DATE,
-    end_date DATE,
-    status VARCHAR(50)
-);
-
--- Table: smart_health.AUDIT_LOGS
--- Brief: System audit registry
-CREATE TABLE IF NOT EXISTS smart_health.AUDIT_LOGS (
-    audit_id VARCHAR(50) PRIMARY KEY,
-    user_id VARCHAR(50),
-    role VARCHAR(50),
-    entity VARCHAR(100),
-    entity_id VARCHAR(50),
-    action VARCHAR(50),
-    detail_json TEXT,
-    ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    ip VARCHAR(50),
-    app VARCHAR(100)
+-- Table: vibesia.REPRODUCCIONES
+-- Brief: Track of song playbacks by users on specific devices
+CREATE TABLE IF NOT EXISTS vibesia.REPRODUCCIONES (
+    reproduccion_id SERIAL PRIMARY KEY,
+    usuario_id INTEGER NOT NULL,
+    cancion_id INTEGER NOT NULL,
+    dispositivo_id INTEGER NOT NULL,
+    fecha_hora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completada BOOLEAN NOT NULL DEFAULT TRUE,
+    calificacion INTEGER CHECK (calificacion BETWEEN 1 AND 5)
 );
 
 -- ##################################################
 -- #            RELATIONSHIP DEFINITIONS            #
 -- ##################################################
 
--- Relationships for PATIENT_DOCUMENTS
-ALTER TABLE smart_health.PATIENT_DOCUMENTS ADD CONSTRAINT fk_documents_patients 
-    FOREIGN KEY (patient_id) REFERENCES smart_health.PATIENTS (patient_id);
-ALTER TABLE smart_health.PATIENT_DOCUMENTS ADD CONSTRAINT fk_documents_types 
-    FOREIGN KEY (document_type_id) REFERENCES smart_health.DOCUMENT_TYPES (document_type_id);
+-- Relationships for ALBUMES
+ALTER TABLE vibesia.ALBUMES ADD CONSTRAINT fk_albumes_artistas 
+    FOREIGN KEY (artista_id) REFERENCES vibesia.ARTISTAS (artista_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT;
 
--- Relationships for ADDRESSES, PHONES, CONTACTS
-ALTER TABLE smart_health.PATIENT_ADDRESSES ADD CONSTRAINT fk_addresses_patients 
-    FOREIGN KEY (patient_id) REFERENCES smart_health.PATIENTS (patient_id);
-ALTER TABLE smart_health.PATIENT_PHONES ADD CONSTRAINT fk_phones_patients 
-    FOREIGN KEY (patient_id) REFERENCES smart_health.PATIENTS (patient_id);
-ALTER TABLE smart_health.EMERGENCY_CONTACTS ADD CONSTRAINT fk_contacts_patients 
-    FOREIGN KEY (patient_id) REFERENCES smart_health.PATIENTS (patient_id);
+-- Relationships for CANCIONES
+ALTER TABLE vibesia.CANCIONES ADD CONSTRAINT fk_canciones_albumes 
+    FOREIGN KEY (album_id) REFERENCES vibesia.ALBUMES (album_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT;
 
--- Relationships for DOCTORS
-ALTER TABLE smart_health.DOCTOR_SPECIALTIES ADD CONSTRAINT fk_doctor_specialties_doctors 
-    FOREIGN KEY (doctor_id) REFERENCES smart_health.DOCTORS (doctor_id);
-ALTER TABLE smart_health.DOCTOR_SPECIALTIES ADD CONSTRAINT fk_doctor_specialties_specialties 
-    FOREIGN KEY (specialty_id) REFERENCES smart_health.SPECIALTIES (specialty_id);
-ALTER TABLE smart_health.DOCTOR_ADDRESSES ADD CONSTRAINT fk_doctor_addresses_doctors 
-    FOREIGN KEY (doctor_id) REFERENCES smart_health.DOCTORS (doctor_id);
-ALTER TABLE smart_health.DOCTOR_PHONES ADD CONSTRAINT fk_doctor_phones_doctors 
-    FOREIGN KEY (doctor_id) REFERENCES smart_health.DOCTORS (doctor_id);
-ALTER TABLE smart_health.DOCTOR_SCHEDULES ADD CONSTRAINT fk_doctor_schedules_doctors 
-    FOREIGN KEY (doctor_id) REFERENCES smart_health.DOCTORS (doctor_id);
+-- Relationships for PLAYLISTS
+ALTER TABLE vibesia.PLAYLISTS ADD CONSTRAINT fk_playlists_usuarios 
+    FOREIGN KEY (usuario_id) REFERENCES vibesia.USUARIOS (usuario_id)
+    ON UPDATE CASCADE ON DELETE CASCADE;
 
--- Relationships for APPOINTMENTS
-ALTER TABLE smart_health.APPOINTMENTS ADD CONSTRAINT fk_appointments_patients 
-    FOREIGN KEY (patient_id) REFERENCES smart_health.PATIENTS (patient_id);
-ALTER TABLE smart_health.APPOINTMENTS ADD CONSTRAINT fk_appointments_doctors 
-    FOREIGN KEY (doctor_id) REFERENCES smart_health.DOCTORS (doctor_id);
-ALTER TABLE smart_health.APPOINTMENTS ADD CONSTRAINT fk_appointments_rooms 
-    FOREIGN KEY (room_id) REFERENCES smart_health.ROOMS (room_id);
+-- Relationships for CANCION_GENERO
+ALTER TABLE vibesia.CANCION_GENERO ADD CONSTRAINT fk_cancion_genero_canciones 
+    FOREIGN KEY (cancion_id) REFERENCES vibesia.CANCIONES (cancion_id)
+    ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE vibesia.CANCION_GENERO ADD CONSTRAINT fk_cancion_genero_generos 
+    FOREIGN KEY (genero_id) REFERENCES vibesia.GENEROS (genero_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT;
 
--- Relationships for CLINICAL_HISTORIES
-ALTER TABLE smart_health.CLINICAL_HISTORIES ADD CONSTRAINT fk_histories_appointments 
-    FOREIGN KEY (appointment_id) REFERENCES smart_health.APPOINTMENTS (appointment_id);
-ALTER TABLE smart_health.CLINICAL_HISTORIES ADD CONSTRAINT fk_histories_patients 
-    FOREIGN KEY (patient_id) REFERENCES smart_health.PATIENTS (patient_id);
-ALTER TABLE smart_health.CLINICAL_HISTORIES ADD CONSTRAINT fk_histories_authors 
-    FOREIGN KEY (author_id) REFERENCES smart_health.DOCTORS (doctor_id);
-ALTER TABLE smart_health.CLINICAL_HISTORIES ADD CONSTRAINT fk_histories_diagnoses 
-    FOREIGN KEY (main_diagnosis_id) REFERENCES smart_health.DIAGNOSES (diagnosis_id);
+-- Relationships for PLAYLIST_CANCION
+ALTER TABLE vibesia.PLAYLIST_CANCION ADD CONSTRAINT fk_playlist_cancion_playlists 
+    FOREIGN KEY (playlist_id) REFERENCES vibesia.PLAYLISTS (playlist_id)
+    ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE vibesia.PLAYLIST_CANCION ADD CONSTRAINT fk_playlist_cancion_canciones 
+    FOREIGN KEY (cancion_id) REFERENCES vibesia.CANCIONES (cancion_id)
+    ON UPDATE CASCADE ON DELETE CASCADE;
 
--- Relationships for secondary entities
-ALTER TABLE smart_health.HISTORY_DIAGNOSES ADD CONSTRAINT fk_history_diagnoses_histories 
-    FOREIGN KEY (history_id) REFERENCES smart_health.CLINICAL_HISTORIES (history_id);
-ALTER TABLE smart_health.HISTORY_DIAGNOSES ADD CONSTRAINT fk_history_diagnoses_diagnoses 
-    FOREIGN KEY (diagnosis_id) REFERENCES smart_health.DIAGNOSES (diagnosis_id);
-ALTER TABLE smart_health.PRESCRIPTIONS ADD CONSTRAINT fk_prescriptions_histories 
-    FOREIGN KEY (history_id) REFERENCES smart_health.CLINICAL_HISTORIES (history_id);
-ALTER TABLE smart_health.PRESCRIPTIONS ADD CONSTRAINT fk_prescriptions_medications 
-    FOREIGN KEY (medication_id) REFERENCES smart_health.MEDICATIONS (medication_id);
-ALTER TABLE smart_health.VITAL_SIGNS ADD CONSTRAINT fk_vitals_histories 
-    FOREIGN KEY (history_id) REFERENCES smart_health.CLINICAL_HISTORIES (history_id);
-ALTER TABLE smart_health.HISTORY_PROCEDURES ADD CONSTRAINT fk_history_procedures_histories 
-    FOREIGN KEY (history_id) REFERENCES smart_health.CLINICAL_HISTORIES (history_id);
-ALTER TABLE smart_health.HISTORY_PROCEDURES ADD CONSTRAINT fk_history_procedures_procedures 
-    FOREIGN KEY (procedure_id) REFERENCES smart_health.PROCEDURES (procedure_id);
-ALTER TABLE smart_health.POLICIES ADD CONSTRAINT fk_policies_patients 
-    FOREIGN KEY (patient_id) REFERENCES smart_health.PATIENTS (patient_id);
-ALTER TABLE smart_health.POLICIES ADD CONSTRAINT fk_policies_insurers 
-    FOREIGN KEY (insurer_id) REFERENCES smart_health.INSURERS (insurer_id);
+-- Relationships for USUARIO_DISPOSITIVO
+ALTER TABLE vibesia.USUARIO_DISPOSITIVO ADD CONSTRAINT fk_usuario_dispositivo_usuarios 
+    FOREIGN KEY (usuario_id) REFERENCES vibesia.USUARIOS (usuario_id)
+    ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE vibesia.USUARIO_DISPOSITIVO ADD CONSTRAINT fk_usuario_dispositivo_dispositivos 
+    FOREIGN KEY (dispositivo_id) REFERENCES vibesia.DISPOSITIVOS (dispositivo_id)
+    ON UPDATE CASCADE ON DELETE CASCADE;
+
+-- Relationships for REPRODUCCIONES
+ALTER TABLE vibesia.REPRODUCCIONES ADD CONSTRAINT fk_reproducciones_usuarios 
+    FOREIGN KEY (usuario_id) REFERENCES vibesia.USUARIOS (usuario_id)
+    ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE vibesia.REPRODUCCIONES ADD CONSTRAINT fk_reproducciones_canciones 
+    FOREIGN KEY (cancion_id) REFERENCES vibesia.CANCIONES (cancion_id)
+    ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE vibesia.REPRODUCCIONES ADD CONSTRAINT fk_reproducciones_dispositivos 
+    FOREIGN KEY (dispositivo_id) REFERENCES vibesia.DISPOSITIVOS (dispositivo_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT;
+
+-- ##################################################
+-- #             INDEX DEFINITIONS                  #
+-- ##################################################
+
+-- Indexes for optimizing frequently queried fields
+CREATE INDEX idx_canciones_titulo ON vibesia.CANCIONES (titulo);
+CREATE INDEX idx_artistas_nombre ON vibesia.ARTISTAS (nombre);
+CREATE INDEX idx_albumes_titulo ON vibesia.ALBUMES (titulo);
+CREATE INDEX idx_playlists_nombre ON vibesia.PLAYLISTS (nombre);
+CREATE INDEX idx_reproducciones_fecha ON vibesia.REPRODUCCIONES (fecha_hora);
+CREATE INDEX idx_reproducciones_usuario_cancion ON vibesia.REPRODUCCIONES (usuario_id, cancion_id);
+CREATE INDEX idx_generos_nombre ON vibesia.GENEROS (nombre);
 
 -- ##################################################
 -- #               END DOCUMENTATION                #

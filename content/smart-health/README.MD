@@ -1,1 +1,1 @@
-# Smart Health - Application - Gisell Alexandra Anaya Santafe
+# Smart Health - Application
